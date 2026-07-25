@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Download, Building, Menu } from 'lucide-react';
+import { useEffect } from 'react';
+import { Building, Menu } from 'lucide-react';
 import type { Settings, Branch } from '../db/db';
 
 interface HeaderProps {
@@ -19,37 +19,7 @@ export function Header({
   setCurrentBranchId,
   onMenuToggle
 }: HeaderProps) {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
 
-  useEffect(() => {
-    // Listen for PWA installation prompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
-      setIsInstalled(true);
-    }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-      setIsInstalled(true);
-    }
-  };
 
   // Sync theme changes with body class
   useEffect(() => {
@@ -106,16 +76,7 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* PWA Install Button */}
-        {deferredPrompt && !isInstalled && (
-          <button
-            onClick={handleInstallClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-accent text-white hover:bg-opacity-95 transition-all shadow-sm shadow-accent/25"
-          >
-            <Download size={13} />
-            Install App
-          </button>
-        )}
+
 
         {/* Global Branch Selector Dropdown */}
         {branches.length > 0 && (
