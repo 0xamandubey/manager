@@ -10,6 +10,10 @@ const isConfigured =
   !supabaseUrl.includes('your-project-ref') && 
   !supabaseAnonKey.includes('your-anon-key');
 
+console.log('[Diagnostic] Supabase URL:', supabaseUrl);
+console.log('[Diagnostic] Supabase Anon Key exists:', !!supabaseAnonKey);
+console.log('[Diagnostic] Is Configured:', isConfigured);
+
 export const supabase = createClient(
   isConfigured ? supabaseUrl : 'https://placeholder-project.supabase.co',
   isConfigured ? supabaseAnonKey : 'placeholder-key',
