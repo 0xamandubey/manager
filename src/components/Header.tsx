@@ -6,8 +6,8 @@ interface HeaderProps {
   settings: Settings;
   currentView: string;
   branches: Branch[];
-  currentBranchId: number;
-  setCurrentBranchId: (id: number) => void;
+  currentBranchId: string;
+  setCurrentBranchId: (id: string) => void;
   onMenuToggle: () => void;
 }
 
@@ -123,7 +123,7 @@ export function Header({
             <Building size={12} className="text-stone-400" />
             <select
               value={currentBranchId}
-              onChange={e => setCurrentBranchId(Number(e.target.value))}
+              onChange={e => setCurrentBranchId(e.target.value)}
               className="bg-transparent border-none outline-none text-stone-850 dark:text-stone-200 font-bold cursor-pointer"
             >
               {branches.map(b => (

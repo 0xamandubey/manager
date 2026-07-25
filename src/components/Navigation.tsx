@@ -30,10 +30,10 @@ export function Navigation({ currentView, setView, isOpen, onClose }: Navigation
         <div className="flex flex-col gap-6">
           <div className="px-3 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary dark:bg-accent flex items-center justify-center text-white font-bold text-base">
-              A
+              M
             </div>
             <span className="font-semibold text-sm tracking-wide text-stone-855 dark:text-stone-100">
-              Staff Portal
+              Manager
             </span>
           </div>
 
@@ -76,10 +76,10 @@ export function Navigation({ currentView, setView, isOpen, onClose }: Navigation
             <div className="flex items-center justify-between px-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary dark:bg-accent flex items-center justify-center text-white font-bold text-base">
-                  A
+                  M
                 </div>
                 <span className="font-semibold text-sm tracking-wide text-stone-855 dark:text-stone-100">
-                  Staff Portal
+                  Manager
                 </span>
               </div>
               

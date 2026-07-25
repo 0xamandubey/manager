@@ -8,8 +8,8 @@ import type { Note } from '../db/db';
 interface NotesViewProps {
   notes: Note[];
   addNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'branchId'>) => Promise<any>;
-  updateNote: (id: number, note: Partial<Omit<Note, 'id' | 'createdAt' | 'branchId'>>) => Promise<any>;
-  deleteNote: (id: number) => Promise<any>;
+  updateNote: (id: string, note: Partial<Omit<Note, 'id' | 'createdAt' | 'branchId'>>) => Promise<any>;
+  deleteNote: (id: string) => Promise<any>;
 }
 
 export function NotesView({ notes, addNote, updateNote, deleteNote }: NotesViewProps) {
@@ -78,7 +78,7 @@ export function NotesView({ notes, addNote, updateNote, deleteNote }: NotesViewP
     }
   };
 
-  const handleDeleteNote = async (id: number) => {
+  const handleDeleteNote = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
       try {
         await deleteNote(id);

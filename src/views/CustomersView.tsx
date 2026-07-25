@@ -11,12 +11,12 @@ interface CustomersViewProps {
   settings: Settings;
   customers: Customer[];
   addCustomer: (customer: Omit<Customer, 'id' | 'branchId'>) => Promise<any>;
-  updateCustomer: (id: number, customer: Partial<Omit<Customer, 'id' | 'branchId'>>) => Promise<any>;
-  deleteCustomer: (id: number) => Promise<any>;
+  updateCustomer: (id: string, customer: Partial<Omit<Customer, 'id' | 'branchId'>>) => Promise<any>;
+  deleteCustomer: (id: string) => Promise<any>;
   customerOrders: CustomerOrder[];
   addCustomerOrder: (order: Omit<CustomerOrder, 'id' | 'branchId' | 'createdAt'>) => Promise<any>;
-  updateCustomerOrder: (id: number, order: Partial<Omit<CustomerOrder, 'id' | 'branchId'>>) => Promise<any>;
-  deleteCustomerOrder: (id: number) => Promise<any>;
+  updateCustomerOrder: (id: string, order: Partial<Omit<CustomerOrder, 'id' | 'branchId'>>) => Promise<any>;
+  deleteCustomerOrder: (id: string) => Promise<any>;
   addTransaction: (tx: Omit<CashTransaction, 'id'>) => Promise<any>;
 }
 
@@ -33,7 +33,7 @@ export function CustomersView({
   addTransaction
 }: CustomersViewProps) {
   // Expansion State per customer ID
-  const [expandedCustomerId, setExpandedCustomerId] = useState<number | null>(null);
+  const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
 
   // Search Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +46,7 @@ export function CustomersView({
 
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<CustomerOrder | null>(null);
-  const [selectedCustomerIdForOrder, setSelectedCustomerIdForOrder] = useState<number | null>(null);
+  const [selectedCustomerIdForOrder, setSelectedCustomerIdForOrder] = useState<string | null>(null);
   
   // Order Form States
   const [productBought, setProductBought] = useState('');
@@ -107,7 +107,7 @@ export function CustomersView({
   };
 
   // Toggle Accordion Expansion
-  const toggleExpandCustomer = (id: number) => {
+  const toggleExpandCustomer = (id: string) => {
     setExpandedCustomerId(prev => (prev === id ? null : id));
   };
 
@@ -172,7 +172,7 @@ export function CustomersView({
   };
 
   // Order CRUD handlers
-  const handleOpenAddOrder = (customerId: number) => {
+  const handleOpenAddOrder = (customerId: string) => {
     setSelectedCustomerIdForOrder(customerId);
     setEditingOrder(null);
     setProductBought('');

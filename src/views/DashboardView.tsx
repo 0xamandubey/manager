@@ -11,7 +11,7 @@ interface DashboardViewProps {
   settings: Settings;
   setView: (view: string) => void;
   getAttendanceForDate: (date: string) => Promise<Attendance[]>;
-  currentBranchId: number;
+  currentBranchId: string;
 }
 
 export function DashboardView({ activeStaff, settings, setView, getAttendanceForDate, currentBranchId }: DashboardViewProps) {

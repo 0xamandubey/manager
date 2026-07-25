@@ -23,7 +23,7 @@ export function ProfitView({
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   
   // Selected Expense Group IDs for Net Profit offset
-  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
 
   // Sync selected group IDs when expense groups load (check all by default)
   useEffect(() => {
@@ -43,7 +43,7 @@ export function ProfitView({
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
   // Toggle selection for a group ID
-  const handleToggleGroup = (id: number) => {
+  const handleToggleGroup = (id: string) => {
     setSelectedGroupIds(prev => 
       prev.includes(id) 
         ? prev.filter(gid => gid !== id) 
@@ -76,7 +76,7 @@ export function ProfitView({
 
     // Must be in selectedGroupIds (if a transaction doesn't have a groupId, treat it as Others or check if it falls under undefined/0)
     // To support backward compatibility, if a transaction has no groupId, we categorize it under 'Others' group (which usually exists)
-    const targetGroupId = tx.groupId || expenseGroups.find(g => g.name.toLowerCase() === 'others')?.id || 0;
+    const targetGroupId = tx.groupId || expenseGroups.find(g => g.name.toLowerCase() === 'others')?.id || '';
     return selectedGroupIds.includes(targetGroupId);
   });
 
@@ -87,7 +87,7 @@ export function ProfitView({
   const isPositiveProfit = netProfit >= 0;
 
   // Grouped expenses totals dictionary
-  const getGroupTotal = (groupId: number) => {
+  const getGroupTotal = (groupId: string) => {
     return cashTransactions
       .filter(tx => {
         if (tx.type !== 'expense') return false;

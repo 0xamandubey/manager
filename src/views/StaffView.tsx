@@ -13,16 +13,16 @@ interface StaffViewProps {
   settings: Settings;
   isLoading?: boolean;
   addStaff: (staffMember: Omit<Staff, 'id'>) => Promise<any>;
-  updateStaff: (id: number, staffMember: Partial<Staff>) => Promise<any>;
+  updateStaff: (id: string, staffMember: Partial<Staff>) => Promise<any>;
   vendors: Vendor[];
   productionEntries: ProductionEntry[];
   addVendor: (vendor: Omit<Vendor, 'id'>) => Promise<any>;
-  updateVendor: (id: number, vendor: Partial<Vendor>) => Promise<any>;
-  deleteVendor: (id: number) => Promise<any>;
+  updateVendor: (id: string, vendor: Partial<Vendor>) => Promise<any>;
+  deleteVendor: (id: string) => Promise<any>;
   addProductionEntry: (entry: Omit<ProductionEntry, 'id'>) => Promise<any>;
-  updateProductionEntry: (id: number, entry: Partial<ProductionEntry>) => Promise<any>;
-  deleteProductionEntry: (id: number) => Promise<any>;
-  payVendorDues: (id: number, vendorName: string, amount: number, notes?: string) => Promise<any>;
+  updateProductionEntry: (id: string, entry: Partial<ProductionEntry>) => Promise<any>;
+  deleteProductionEntry: (id: string) => Promise<any>;
+  payVendorDues: (id: string, vendorName: string, amount: number, notes?: string) => Promise<any>;
 }
 
 export function StaffView({ 
@@ -71,7 +71,7 @@ export function StaffView({
   const [paymentNotes, setPaymentNotes] = useState('');
 
   // Expand state for vendor cards
-  const [expandedVendorIds, setExpandedVendorIds] = useState<Set<number>>(new Set());
+  const [expandedVendorIds, setExpandedVendorIds] = useState<Set<string>>(new Set());
 
   // Form states
   const [name, setName] = useState('');
@@ -93,7 +93,7 @@ export function StaffView({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyActiveTab, setHistoryActiveTab] = useState<'attendance' | 'payments'>('attendance');
 
-  const handleToggleVendorExpand = (vendorId: number) => {
+  const handleToggleVendorExpand = (vendorId: string) => {
     const next = new Set(expandedVendorIds);
     if (next.has(vendorId)) {
       next.delete(vendorId);

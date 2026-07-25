@@ -14,8 +14,8 @@ interface CashLogViewProps {
   customCategories: CustomCategory[];
   expenseGroups: ExpenseGroup[];
   addTransaction: (tx: Omit<CashTransaction, 'id'>) => Promise<any>;
-  updateTransaction: (id: number, tx: Partial<CashTransaction>) => Promise<any>;
-  deleteTransaction: (id: number) => Promise<any>;
+  updateTransaction: (id: string, tx: Partial<CashTransaction>) => Promise<any>;
+  deleteTransaction: (id: string) => Promise<any>;
   addCustomCategory: (name: string, type: 'income' | 'expense' | 'both') => Promise<any>;
 }
 
@@ -41,7 +41,7 @@ export function CashLogView({
   // Form States
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
-  const [expenseGroupId, setExpenseGroupId] = useState<number>(0);
+  const [expenseGroupId, setExpenseGroupId] = useState<string>('');
   const [partyName, setPartyName] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -91,7 +91,7 @@ export function CashLogView({
   const resetForm = () => {
     setAmount('');
     setCategory(modalType === 'income' ? 'Customer Payment' : 'Material');
-    setExpenseGroupId(0);
+    setExpenseGroupId('');
     setPartyName('');
     setNotes('');
     setDate(new Date().toISOString().split('T')[0]);
@@ -115,7 +115,7 @@ export function CashLogView({
     setTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
     setValidationError('');
     setEditingTx(null);
-    setExpenseGroupId(0);
+    setExpenseGroupId('');
 
     if (isSalary) {
       setCategory('Salary');
@@ -132,13 +132,13 @@ export function CashLogView({
   // Calculate unpaid salary when staff is selected
   useEffect(() => {
     if (category === 'Salary' && selectedStaffId) {
-      calculateUnpaidSalary(Number(selectedStaffId));
+      calculateUnpaidSalary(selectedStaffId);
     } else {
       setUnpaidSalaryCalc(null);
     }
   }, [selectedStaffId, category]);
 
-  const calculateUnpaidSalary = async (staffId: number) => {
+  const calculateUnpaidSalary = async (staffId: string) => {
     try {
       const staffMember = activeStaff.find(s => s.id === staffId);
       if (!staffMember) return;
@@ -195,7 +195,7 @@ export function CashLogView({
     setDate(tx.date);
     setTime(tx.time);
     setValidationError('');
-    setExpenseGroupId(tx.groupId || 0);
+    setExpenseGroupId(tx.groupId || '');
     
     // Check if it matches a staff member for salary
     const matchedStaff = activeStaff.find(s => s.name === tx.partyName);
@@ -219,12 +219,12 @@ export function CashLogView({
     const now = new Date();
     setTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
     setValidationError('');
-    setExpenseGroupId(tx.groupId || 0);
+    setExpenseGroupId(tx.groupId || '');
     setShowModal(true);
     triggerToast('success', 'Transaction duplicated! Click Save to log.');
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
       try {
         await deleteTransaction(id);
@@ -825,10 +825,10 @@ export function CashLogView({
                   </label>
                   <select
                     value={expenseGroupId}
-                    onChange={e => setExpenseGroupId(Number(e.target.value))}
+                    onChange={e => setExpenseGroupId(e.target.value)}
                     className="px-3.5 py-2 rounded-xl border border-stone-250/50 dark:border-stone-800/70 bg-stone-50 dark:bg-darkCard text-xs text-stone-850 dark:text-stone-200 focus:outline-none focus:border-accent"
                   >
-                    <option value={0} className="bg-white dark:bg-stone-900 text-stone-850 dark:text-stone-200">Select Group (Optional)</option>
+                    <option value="" className="bg-white dark:bg-stone-900 text-stone-850 dark:text-stone-200">Select Group (Optional)</option>
                     {expenseGroups.map(g => (
                       <option key={g.id} value={g.id} className="bg-white dark:bg-stone-900 text-stone-850 dark:text-stone-200">
                         {g.name}

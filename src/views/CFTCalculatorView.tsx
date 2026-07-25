@@ -8,7 +8,7 @@ import type { CftCalculation } from '../db/db';
 interface CFTCalculatorViewProps {
   cftCalculations: CftCalculation[];
   addCftCalculation: (calc: Omit<CftCalculation, 'id' | 'branchId' | 'createdAt'>) => Promise<any>;
-  deleteCftCalculation: (id: number) => Promise<any>;
+  deleteCftCalculation: (id: string) => Promise<any>;
   clearCftCalculations: () => Promise<any>;
 }
 
@@ -29,7 +29,7 @@ export function CFTCalculatorView({
   const [quantity, setQuantity] = useState('1');
 
   // Selected Log IDs for combined calculation
-  const [selectedLogIds, setSelectedLogIds] = useState<number[]>([]);
+  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
 
   // Toast / Confirmation States
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -80,7 +80,7 @@ export function CFTCalculatorView({
   const calculatedTotalCft = calculatedCftPerPiece * qVal;
 
   // Sync / Toggle Checklist Selection
-  const handleToggleLog = (id: number) => {
+  const handleToggleLog = (id: string) => {
     setSelectedLogIds(prev => 
       prev.includes(id) 
         ? prev.filter(lid => lid !== id) 
@@ -127,7 +127,7 @@ export function CFTCalculatorView({
     }
   };
 
-  const handleDeleteLog = (id: number, e: React.MouseEvent) => {
+  const handleDeleteLog = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteCftCalculation(id);
     setSelectedLogIds(prev => prev.filter(lid => lid !== id));

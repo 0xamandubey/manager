@@ -9,9 +9,9 @@ interface PaymentsViewProps {
   settings: Settings;
   customerDues: CustomerDue[];
   addDue: (due: Omit<CustomerDue, 'id'>) => Promise<any>;
-  receiveDue: (id: number, receivedAmount?: number, paymentDate?: string) => Promise<any>;
-  updateDue: (id: number, due: Partial<CustomerDue>) => Promise<any>;
-  deleteDue: (id: number) => Promise<any>;
+  receiveDue: (id: string, receivedAmount?: number, paymentDate?: string) => Promise<any>;
+  updateDue: (id: string, due: Partial<CustomerDue>) => Promise<any>;
+  deleteDue: (id: string) => Promise<any>;
 }
 
 export function PaymentsView({
@@ -156,7 +156,7 @@ export function PaymentsView({
     }
   };
 
-  const handleDeleteDue = async (id: number) => {
+  const handleDeleteDue = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this credit due record?')) {
       try {
         await deleteDue(id);

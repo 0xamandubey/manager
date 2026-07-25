@@ -76,3 +76,32 @@
 .mb-safe {
   margin-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* Custom premium transitions */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.97); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Luxury Blueprint Grid background without images */
+.auth-bg-grid {
+  background-image: radial-gradient(circle at 1px 1px, rgba(176, 138, 74, 0.085) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+.dark .auth-bg-grid {
+  background-image: radial-gradient(circle at 1px 1px, rgba(176, 138, 74, 0.125) 1px, transparent 0);
+  background-size: 28px 28px;
+}

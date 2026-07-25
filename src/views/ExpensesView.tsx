@@ -11,11 +11,11 @@ interface ExpensesViewProps {
   cashTransactions: CashTransaction[];
   expenseGroups: ExpenseGroup[];
   addExpenseGroup: (name: string) => Promise<any>;
-  updateExpenseGroup: (id: number, name: string) => Promise<any>;
-  deleteExpenseGroup: (id: number) => Promise<any>;
+  updateExpenseGroup: (id: string, name: string) => Promise<any>;
+  deleteExpenseGroup: (id: string) => Promise<any>;
   addTransaction: (tx: Omit<CashTransaction, 'id'>) => Promise<any>;
-  updateTransaction: (id: number, tx: Partial<CashTransaction>) => Promise<any>;
-  deleteTransaction: (id: number) => Promise<any>;
+  updateTransaction: (id: string, tx: Partial<CashTransaction>) => Promise<any>;
+  deleteTransaction: (id: string) => Promise<any>;
 }
 
 export function ExpensesView({
@@ -36,7 +36,7 @@ export function ExpensesView({
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   
   // Custom Selected Group state
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   // Custom Group Modal
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -48,7 +48,7 @@ export function ExpensesView({
   const [editingTx, setEditingTx] = useState<CashTransaction | null>(null);
   const [expenseName, setExpenseName] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
-  const [expenseGroupId, setExpenseGroupId] = useState<number>(0);
+  const [expenseGroupId, setExpenseGroupId] = useState<string>('');
   const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [expenseTime, setExpenseTime] = useState(() => {
     const now = new Date();
@@ -159,7 +159,7 @@ export function ExpensesView({
     setExpenseName('');
     setExpenseAmount('');
     // Lock to the currently active group selection
-    setExpenseGroupId(selectedGroupId || expenseGroups[0]?.id || 0);
+    setExpenseGroupId(selectedGroupId || expenseGroups[0]?.id || '');
     setExpenseDate(new Date().toISOString().split('T')[0]);
     const now = new Date();
     setExpenseTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
@@ -171,7 +171,7 @@ export function ExpensesView({
     setEditingTx(tx);
     setExpenseName(tx.category);
     setExpenseAmount(tx.amount.toString());
-    setExpenseGroupId(tx.groupId || 0);
+    setExpenseGroupId(tx.groupId || '');
     setExpenseDate(tx.date);
     setExpenseTime(tx.time);
     setExpenseNotes(tx.notes || '');
@@ -210,7 +210,7 @@ export function ExpensesView({
     }
   };
 
-  const handleDeleteExpense = (id: number) => {
+  const handleDeleteExpense = (id: string) => {
     triggerConfirm(
       'Delete Expense',
       'Are you sure you want to delete this expense record? This will permanently remove it from both Expenses and Cash Log lists.',
@@ -252,7 +252,7 @@ export function ExpensesView({
   });
 
   // Calculate totals per group (still scoped to the active date/month filters)
-  const getGroupTotal = (groupId?: number) => {
+  const getGroupTotal = (groupId?: string) => {
     return activeTransactions
       .filter(tx => tx.groupId === groupId)
       .reduce((sum, tx) => sum + tx.amount, 0);
@@ -671,7 +671,7 @@ export function ExpensesView({
                   </label>
                   <select
                     value={expenseGroupId}
-                    onChange={e => setExpenseGroupId(Number(e.target.value))}
+                    onChange={e => setExpenseGroupId(e.target.value)}
                     disabled={true}
                     className="w-full px-3.5 py-2 rounded-xl border border-stone-250/50 dark:border-stone-800/70 bg-stone-100 dark:bg-stone-800 text-xs text-stone-450 dark:text-stone-400 cursor-not-allowed opacity-80"
                   >

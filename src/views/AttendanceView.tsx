@@ -11,7 +11,7 @@ interface AttendanceViewProps {
   settings: Settings;
   isLoading?: boolean;
   getAttendanceForDate: (date: string) => Promise<Attendance[]>;
-  saveAttendanceForDate: (date: string, records: { staffId: number; value: number }[]) => Promise<void>;
+  saveAttendanceForDate: (date: string, records: { staffId: string; value: number }[]) => Promise<void>;
   getSalaryReport: (startDate: string, endDate: string) => Promise<any[]>;
   addTransaction: (tx: Omit<CashTransaction, 'id'>) => Promise<any>;
 }
@@ -38,7 +38,7 @@ export function AttendanceView({
   };
 
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
-  const [attendanceValues, setAttendanceValues] = useState<Record<number, number>>({});
+  const [attendanceValues, setAttendanceValues] = useState<Record<string, number>>({});
   const [isModified, setIsModified] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [dailyLoading, setDailyLoading] = useState(false);
@@ -100,7 +100,7 @@ export function AttendanceView({
       setDailyLoading(true);
       try {
         const records = await getAttendanceForDate(selectedDate);
-        const valuesMap: Record<number, number> = {};
+        const valuesMap: Record<string, number> = {};
         
         records.forEach(rec => {
           valuesMap[rec.staffId] = rec.attendanceValue;
@@ -136,7 +136,7 @@ export function AttendanceView({
   }, [reportStartDate, reportEndDate, getSalaryReport, filterType]);
 
   // Daily Marking Actions
-  const handleValueChange = (staffId: number, value: number) => {
+  const handleValueChange = (staffId: string, value: number) => {
     setAttendanceValues(prev => ({
       ...prev,
       [staffId]: value,
@@ -157,7 +157,7 @@ export function AttendanceView({
   };
 
   const handleSaveClick = () => {
-    const markedIds = Object.keys(attendanceValues).map(Number);
+    const markedIds = Object.keys(attendanceValues);
     if (markedIds.length === 0) {
       setNotification({ type: 'error', message: 'Please mark attendance for at least one staff member.' });
       return;
@@ -170,7 +170,7 @@ export function AttendanceView({
     setDailyLoading(true);
     try {
       const recordsToSave = Object.entries(attendanceValues).map(([staffId, value]) => ({
-        staffId: Number(staffId),
+        staffId,
         value,
       }));
 

@@ -14,6 +14,7 @@ import { ExpensesView } from './views/ExpensesView';
 import { ProfitView } from './views/ProfitView';
 import { CustomersView } from './views/CustomersView';
 import { CFTCalculatorView } from './views/CFTCalculatorView';
+import { RouteGuard } from './components/RouteGuard';
 
 function App() {
   const [currentView, setView] = useState<string>('dashboard');
@@ -243,33 +244,35 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-background dark:bg-darkBg transition-colors duration-200">
-      {/* Navigation (Sidebar on Desktop, Hamburger Drawer on Mobile) */}
-      <Navigation 
-        currentView={currentView} 
-        setView={setView} 
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-      />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-4 md:pb-0">
-        {/* Top Header */}
-        <Header
-          settings={settings}
-          currentView={currentView}
-          branches={branches}
-          currentBranchId={activeBranchId}
-          setCurrentBranchId={changeActiveBranch}
-          onMenuToggle={() => setIsMobileMenuOpen(true)}
+    <RouteGuard>
+      <div className="min-h-screen flex flex-col md:flex-row bg-background dark:bg-darkBg transition-colors duration-200">
+        {/* Navigation (Sidebar on Desktop, Hamburger Drawer on Mobile) */}
+        <Navigation 
+          currentView={currentView} 
+          setView={setView} 
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
         />
 
-        {/* View Component container */}
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-          {renderActiveView()}
-        </main>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-4 md:pb-0">
+          {/* Top Header */}
+          <Header
+            settings={settings}
+            currentView={currentView}
+            branches={branches}
+            currentBranchId={activeBranchId}
+            setCurrentBranchId={changeActiveBranch}
+            onMenuToggle={() => setIsMobileMenuOpen(true)}
+          />
+
+          {/* View Component container */}
+          <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+            {renderActiveView()}
+          </main>
+        </div>
       </div>
-    </div>
+    </RouteGuard>
   );
 }
 

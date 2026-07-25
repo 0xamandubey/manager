@@ -9,8 +9,8 @@ interface SalesViewProps {
   settings: Settings;
   sales: Sale[];
   addSale: (sale: Omit<Sale, 'id'>) => Promise<any>;
-  updateSale: (id: number, sale: Partial<Sale>) => Promise<any>;
-  deleteSale: (id: number) => Promise<any>;
+  updateSale: (id: string, sale: Partial<Sale>) => Promise<any>;
+  deleteSale: (id: string) => Promise<any>;
 }
 
 export function SalesView({ settings, sales, addSale, updateSale, deleteSale }: SalesViewProps) {
@@ -22,7 +22,7 @@ export function SalesView({ settings, sales, addSale, updateSale, deleteSale }: 
   const [filterCustomEnd, setFilterCustomEnd] = useState('');
 
   // Expand states for item cost breakdowns
-  const [expandedSaleIds, setExpandedSaleIds] = useState<Set<number>>(new Set());
+  const [expandedSaleIds, setExpandedSaleIds] = useState<Set<string>>(new Set());
 
   const handleOpenEditModal = (sale: Sale) => {
     setEditingSale(sale);
@@ -56,7 +56,7 @@ export function SalesView({ settings, sales, addSale, updateSale, deleteSale }: 
     setShowModal(false);
   };
 
-  const handleToggleExpand = (id: number) => {
+  const handleToggleExpand = (id: string) => {
     const next = new Set(expandedSaleIds);
     if (next.has(id)) {
       next.delete(id);
@@ -143,7 +143,7 @@ export function SalesView({ settings, sales, addSale, updateSale, deleteSale }: 
     }
   };
 
-  const handleDeleteClick = async (id: number) => {
+  const handleDeleteClick = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this sales record? This action cannot be undone.')) {
       try {
         await deleteSale(id);

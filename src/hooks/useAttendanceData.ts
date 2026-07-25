@@ -1,22 +1,22 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Staff, type Attendance, type Settings, type CashTransaction, type CustomerDue, type Sale, type Vendor, type ProductionEntry, type Note, type Customer, type CustomerOrder, type CftCalculation, initDefaultSettings } from '../db/db';
+import { db, type Staff, type Attendance, type Settings, type CashTransaction, type CustomerDue, type Sale, type Vendor, type ProductionEntry, type Note, type ExpenseGroup, type Customer, type CustomerOrder, type CftCalculation, initDefaultSettings } from '../db/db';
 import { useEffect, useState } from 'react';
 
 export function useAttendanceData() {
-  // Expose activeBranchId safely
-  const [activeBranchId, setActiveBranchId] = useState<number>(() => {
+  // Expose activeBranchId safely as a string UUID
+  const [activeBranchId, setActiveBranchId] = useState<string>(() => {
     try {
-      return Number(localStorage.getItem('activeBranchId') || '1');
+      return localStorage.getItem('activeBranchId') || '';
     } catch (e) {
       console.warn('localStorage is restricted:', e);
-      return 1;
+      return '';
     }
   });
 
-  const changeActiveBranch = (id: number) => {
+  const changeActiveBranch = (id: string) => {
     setActiveBranchId(id);
     try {
-      localStorage.setItem('activeBranchId', id.toString());
+      localStorage.setItem('activeBranchId', id);
     } catch (e) {
       console.warn('localStorage is restricted:', e);
     }
@@ -27,9 +27,23 @@ export function useAttendanceData() {
     initDefaultSettings();
   }, []);
 
+  // Fetch all branches
+  const branches = useLiveQuery(() => db.branches.toArray()) || [];
+
+  // Auto-select first branch if activeBranchId is not set
+  useEffect(() => {
+    if (!activeBranchId && branches.length > 0) {
+      const firstBranchId = branches[0].id;
+      if (firstBranchId) {
+        changeActiveBranch(firstBranchId);
+      }
+    }
+  }, [branches, activeBranchId]);
+
   // Seeding default expense groups for the active branch if empty
   useEffect(() => {
     async function seedGroups() {
+      if (!activeBranchId) return;
       try {
         const count = await db.expenseGroups.where('branchId').equals(activeBranchId).count();
         if (count === 0) {
@@ -45,12 +59,9 @@ export function useAttendanceData() {
     seedGroups();
   }, [activeBranchId]);
 
-  // Fetch all branches
-  const branches = useLiveQuery(() => db.branches.toArray()) || [];
-
   // Fetch staff members for the active branch
-  const staff = useLiveQuery(() => 
-    db.staff.where('branchId').equals(activeBranchId).toArray(),
+  const staff = useLiveQuery<Staff[]>(() => 
+    activeBranchId ? db.staff.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   );
   
@@ -59,64 +70,64 @@ export function useAttendanceData() {
   const isLoading = staff === undefined;
 
   // Fetch Cash Transactions & Custom Categories for the active branch
-  const cashTransactions = useLiveQuery(() => 
-    db.cashLog.where('branchId').equals(activeBranchId).toArray(),
+  const cashTransactions = useLiveQuery<CashTransaction[]>(() => 
+    activeBranchId ? db.cashLog.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
   
   const customCategories = useLiveQuery(() => db.customCategories.toArray()) || [];
 
   // Fetch Customer Dues for the active branch
-  const customerDues = useLiveQuery(() => 
-    db.customerDues.where('branchId').equals(activeBranchId).toArray(),
+  const customerDues = useLiveQuery<CustomerDue[]>(() => 
+    activeBranchId ? db.customerDues.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
   // Fetch Sales for the active branch
-  const sales = useLiveQuery(() =>
-    db.sales.where('branchId').equals(activeBranchId).toArray(),
+  const sales = useLiveQuery<Sale[]>(() =>
+    activeBranchId ? db.sales.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
   // Fetch Vendors for the active branch
-  const vendors = useLiveQuery(() => 
-    db.vendors.where('branchId').equals(activeBranchId).toArray(),
+  const vendors = useLiveQuery<Vendor[]>(() => 
+    activeBranchId ? db.vendors.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
   // Fetch Production Entries for the active branch
-  const productionEntries = useLiveQuery(() => 
-    db.productionEntries.where('branchId').equals(activeBranchId).toArray(),
+  const productionEntries = useLiveQuery<ProductionEntry[]>(() => 
+    activeBranchId ? db.productionEntries.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
   // Fetch Notes for the active branch
-  const notes = useLiveQuery(() =>
-    db.notes.where('branchId').equals(activeBranchId).toArray(),
+  const notes = useLiveQuery<Note[]>(() =>
+    activeBranchId ? db.notes.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
   // Fetch Expense Groups for the active branch
-  const expenseGroups = useLiveQuery(() =>
-    db.expenseGroups.where('branchId').equals(activeBranchId).toArray(),
+  const expenseGroups = useLiveQuery<ExpenseGroup[]>(() =>
+    activeBranchId ? db.expenseGroups.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
   // Fetch Customers for the active branch
-  const customers = useLiveQuery(() =>
-    db.customers.where('branchId').equals(activeBranchId).toArray(),
+  const customers = useLiveQuery<Customer[]>(() =>
+    activeBranchId ? db.customers.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
   // Fetch Customer Orders for the active branch
-  const customerOrders = useLiveQuery(() =>
-    db.customerOrders.where('branchId').equals(activeBranchId).toArray(),
+  const customerOrders = useLiveQuery<CustomerOrder[]>(() =>
+    activeBranchId ? db.customerOrders.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
   // Fetch CFT Calculations for the active branch
-  const cftCalculations = useLiveQuery(() =>
-    db.cftCalculations.where('branchId').equals(activeBranchId).toArray(),
+  const cftCalculations = useLiveQuery<CftCalculation[]>(() =>
+    activeBranchId ? db.cftCalculations.where('branchId').equals(activeBranchId).toArray() : Promise.resolve([]),
     [activeBranchId]
   ) || [];
 
@@ -135,7 +146,7 @@ export function useAttendanceData() {
   };
 
   // Save/Update attendance records for a specific date
-  const saveAttendanceForDate = async (dateStr: string, records: { staffId: number; value: number }[]) => {
+  const saveAttendanceForDate = async (dateStr: string, records: { staffId: string; value: number }[]) => {
     return await db.transaction('rw', [db.attendance], async () => {
       for (const record of records) {
         // Find existing attendance for this staff member on this date
@@ -162,16 +173,20 @@ export function useAttendanceData() {
     return await db.staff.add({ ...staffMember, branchId: activeBranchId });
   };
 
-  const updateStaff = async (id: number, staffMember: Partial<Staff>) => {
+  const updateStaff = async (id: string, staffMember: Partial<Staff>) => {
     return await db.staff.update(id, staffMember);
   };
 
-  const archiveStaff = async (id: number) => {
+  const archiveStaff = async (id: string) => {
     return await db.staff.update(id, { status: 'archived' });
   };
 
-  const unarchiveStaff = async (id: number) => {
+  const unarchiveStaff = async (id: string) => {
     return await db.staff.update(id, { status: 'active' });
+  };
+
+  const deleteStaff = async (id: string) => {
+    return await db.staff.delete(id);
   };
 
   // Update Settings
@@ -195,15 +210,15 @@ export function useAttendanceData() {
       .toArray();
 
     // Filter staff list to only match the selected active branch
-    const staffList = await db.staff.where('branchId').equals(activeBranchId).toArray();
-    const staffMap = new Map<number, Staff>();
+    const staffList = activeBranchId ? await db.staff.where('branchId').equals(activeBranchId).toArray() : [];
+    const staffMap = new Map<string, Staff>();
     staffList.forEach(s => staffMap.set(s.id!, s));
 
     // Filter attendance records to match active branch's staff
     const branchAttendanceRecords = attendanceRecords.filter(rec => staffMap.has(rec.staffId));
 
     // Group records by staff ID
-    const recordsByStaff = new Map<number, Attendance[]>();
+    const recordsByStaff = new Map<string, Attendance[]>();
     branchAttendanceRecords.forEach(rec => {
       const list = recordsByStaff.get(rec.staffId) || [];
       list.push(rec);
@@ -243,11 +258,11 @@ export function useAttendanceData() {
     return await db.cashLog.add({ ...transaction, branchId: activeBranchId });
   };
 
-  const updateTransaction = async (id: number, transaction: Partial<CashTransaction>) => {
+  const updateTransaction = async (id: string, transaction: Partial<CashTransaction>) => {
     return await db.cashLog.update(id, transaction);
   };
 
-  const deleteTransaction = async (id: number) => {
+  const deleteTransaction = async (id: string) => {
     return await db.cashLog.delete(id);
   };
 
@@ -255,7 +270,7 @@ export function useAttendanceData() {
     return await db.customCategories.add({ name, type });
   };
 
-  const deleteCustomCategory = async (id: number) => {
+  const deleteCustomCategory = async (id: string) => {
     return await db.customCategories.delete(id);
   };
 
@@ -264,7 +279,7 @@ export function useAttendanceData() {
     return await db.customerDues.add({ ...due, branchId: activeBranchId });
   };
 
-  const receiveDue = async (id: number, receivedAmount?: number, paymentDate?: string) => {
+  const receiveDue = async (id: string, receivedAmount?: number, paymentDate?: string) => {
     return await db.transaction('rw', [db.customerDues, db.cashLog, db.customerOrders], async () => {
       const due = await db.customerDues.get(id);
       if (!due) throw new Error('Due not found');
@@ -314,11 +329,11 @@ export function useAttendanceData() {
     });
   };
 
-  const updateDue = async (id: number, due: Partial<CustomerDue>) => {
+  const updateDue = async (id: string, due: Partial<CustomerDue>) => {
     return await db.customerDues.update(id, due);
   };
 
-  const deleteDue = async (id: number) => {
+  const deleteDue = async (id: string) => {
     return await db.customerDues.delete(id);
   };
 
@@ -327,11 +342,11 @@ export function useAttendanceData() {
     return await db.sales.add({ ...sale, branchId: activeBranchId });
   };
 
-  const updateSale = async (id: number, sale: Partial<Sale>) => {
+  const updateSale = async (id: string, sale: Partial<Sale>) => {
     return await db.sales.update(id, sale);
   };
 
-  const deleteSale = async (id: number) => {
+  const deleteSale = async (id: string) => {
     return await db.sales.delete(id);
   };
 
@@ -340,11 +355,11 @@ export function useAttendanceData() {
     return await db.branches.add({ name });
   };
 
-  const renameBranch = async (id: number, newName: string) => {
+  const renameBranch = async (id: string, newName: string) => {
     return await db.branches.update(id, { name: newName });
   };
 
-  const deleteBranch = async (id: number) => {
+  const deleteBranch = async (id: string) => {
     return await db.transaction('rw', [db.branches, db.staff, db.cashLog, db.customerDues, db.sales], async () => {
       const count = await db.branches.count();
       if (count <= 1) {
@@ -465,11 +480,11 @@ export function useAttendanceData() {
     });
   };
 
-  const updateVendor = async (id: number, vendor: Partial<Vendor>) => {
+  const updateVendor = async (id: string, vendor: Partial<Vendor>) => {
     return await db.vendors.update(id, vendor);
   };
 
-  const deleteVendor = async (id: number) => {
+  const deleteVendor = async (id: string) => {
     await db.productionEntries.where('vendorId').equals(id).delete();
     return await db.vendors.delete(id);
   };
@@ -481,15 +496,15 @@ export function useAttendanceData() {
     });
   };
 
-  const updateProductionEntry = async (id: number, entry: Partial<ProductionEntry>) => {
+  const updateProductionEntry = async (id: string, entry: Partial<ProductionEntry>) => {
     return await db.productionEntries.update(id, entry);
   };
 
-  const deleteProductionEntry = async (id: number) => {
+  const deleteProductionEntry = async (id: string) => {
     return await db.productionEntries.delete(id);
   };
 
-  const payVendorDues = async (vendorId: number, vendorName: string, amount: number, notes?: string) => {
+  const payVendorDues = async (vendorId: string, vendorName: string, amount: number, notes?: string) => {
     const unpaidEntries = await db.productionEntries
       .where('vendorId')
       .equals(vendorId)
@@ -500,7 +515,7 @@ export function useAttendanceData() {
     unpaidEntries.sort((a, b) => {
       const dateCompare = a.date.localeCompare(b.date);
       if (dateCompare !== 0) return dateCompare;
-      return (a.id || 0) - (b.id || 0);
+      return (a.id || '').localeCompare(b.id || '');
     });
 
     if (unpaidEntries.length === 0) return;
@@ -564,14 +579,14 @@ export function useAttendanceData() {
     });
   };
 
-  const updateNote = async (id: number, note: Partial<Omit<Note, 'id' | 'createdAt' | 'branchId'>>) => {
+  const updateNote = async (id: string, note: Partial<Omit<Note, 'id' | 'createdAt' | 'branchId'>>) => {
     return await db.notes.update(id, {
       ...note,
       updatedAt: Date.now(),
     });
   };
 
-  const deleteNote = async (id: number) => {
+  const deleteNote = async (id: string) => {
     return await db.notes.delete(id);
   };
 
@@ -580,11 +595,11 @@ export function useAttendanceData() {
     return await db.expenseGroups.add({ name, branchId: activeBranchId });
   };
 
-  const updateExpenseGroup = async (id: number, name: string) => {
+  const updateExpenseGroup = async (id: string, name: string) => {
     return await db.expenseGroups.update(id, { name });
   };
 
-  const deleteExpenseGroup = async (id: number) => {
+  const deleteExpenseGroup = async (id: string) => {
     return await db.transaction('rw', [db.expenseGroups, db.cashLog], async () => {
       const groupToDelete = await db.expenseGroups.get(id);
       if (!groupToDelete) return;
@@ -612,11 +627,11 @@ export function useAttendanceData() {
     return await db.customers.add({ ...customer, branchId: activeBranchId });
   };
 
-  const updateCustomer = async (id: number, customer: Partial<Omit<Customer, 'id' | 'branchId'>>) => {
+  const updateCustomer = async (id: string, customer: Partial<Omit<Customer, 'id' | 'branchId'>>) => {
     return await db.customers.update(id, customer);
   };
 
-  const deleteCustomer = async (id: number) => {
+  const deleteCustomer = async (id: string) => {
     return await db.transaction('rw', [db.customers, db.customerOrders, db.customerDues, db.sales], async () => {
       const orders = await db.customerOrders.where('customerId').equals(id).toArray();
       const orderIds = orders.map(o => o.id!).filter(Boolean);
@@ -678,7 +693,7 @@ export function useAttendanceData() {
     });
   };
 
-  const updateCustomerOrder = async (id: number, order: Partial<Omit<CustomerOrder, 'id' | 'branchId'>>) => {
+  const updateCustomerOrder = async (id: string, order: Partial<Omit<CustomerOrder, 'id' | 'branchId'>>) => {
     return await db.transaction('rw', [db.customerOrders, db.customerDues, db.customers, db.sales], async () => {
       await db.customerOrders.update(id, order);
 
@@ -735,7 +750,7 @@ export function useAttendanceData() {
     });
   };
 
-  const deleteCustomerOrder = async (id: number) => {
+  const deleteCustomerOrder = async (id: string) => {
     return await db.transaction('rw', [db.customerOrders, db.customerDues, db.sales], async () => {
       await db.customerOrders.delete(id);
       await db.customerDues.filter(d => d.orderId === id).delete();
@@ -752,7 +767,7 @@ export function useAttendanceData() {
     });
   };
 
-  const deleteCftCalculation = async (id: number) => {
+  const deleteCftCalculation = async (id: string) => {
     return await db.cftCalculations.delete(id);
   };
 
@@ -794,6 +809,7 @@ export function useAttendanceData() {
     saveAttendanceForDate,
     addStaff,
     updateStaff,
+    deleteStaff,
     archiveStaff,
     unarchiveStaff,
     updateSettings,
