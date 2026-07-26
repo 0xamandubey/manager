@@ -287,93 +287,99 @@ export function AttendanceView({
       
       {/* 1. Mode/Period Selection Switcher Panel */}
       <div className="glass-card rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-        {/* Switch Options */}
-        <div className="flex p-0.5 bg-stone-100 dark:bg-darkSecondary rounded-xl border border-stone-250/20 dark:border-stone-850/40 w-fit">
-          {[
-            { id: 'today', label: 'Today (Marking)' },
-            { id: 'weekly', label: 'Weekly' },
-            { id: 'monthly', label: 'Monthly' },
-            { id: 'yearly', label: 'Yearly' },
-            { id: 'custom', label: 'Custom Range' },
-          ].map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => setFilterType(opt.id as any)}
-              className={`px-3 py-1.5 rounded-lg text-3xs font-semibold transition-all ${
-                filterType === opt.id
-                  ? 'bg-white text-black font-bold shadow-sm'
-                  : 'text-stone-500 hover:text-stone-750 dark:text-stone-450 dark:hover:text-stone-300'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Dynamic Context Header Controls */}
-        {filterType === 'today' ? (
-          // Daily Nav for Today View
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrevDay}
-              className="p-1.5 rounded-xl border border-stone-200/50 dark:border-stone-850/50 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <div className="relative flex items-center bg-stone-55 border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-2.5 py-1 text-3xs font-semibold text-stone-700 dark:text-stone-300 gap-1.5 cursor-pointer">
-              <CalendarIcon size={12} className="text-stone-400" />
-              <span>{formatDateToDMY(selectedDate)}</span>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              />
+        
+        {/* Mobile Layout: Dropdown and Date Selector side-by-side */}
+        <div className="flex md:hidden flex-col gap-3 w-full animate-fade-in">
+          <div className="flex items-center justify-between gap-2 w-full">
+            {/* Dropdown Menu */}
+            <div className="relative min-w-[110px] flex-1">
+              <select
+                value={filterType}
+                onChange={e => setFilterType(e.target.value as any)}
+                className="w-full px-2.5 py-2 bg-stone-100 dark:bg-darkSecondary rounded-xl border border-stone-250/40 dark:border-stone-850/40 text-3xs font-bold text-stone-850 dark:text-stone-200 outline-none cursor-pointer appearance-none"
+              >
+                <option value="today">Today (Marking)</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-stone-500 dark:text-stone-400">
+                <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                </svg>
+              </div>
             </div>
-            <button
-              onClick={handleNextDay}
-              className="p-1.5 rounded-xl border border-stone-200/50 dark:border-stone-850/50 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300"
-            >
-              <ChevronRight size={15} />
-            </button>
+
+            {/* Date Selector beside the dropdown */}
+            <div className="flex-1 flex justify-end">
+              {filterType === 'today' ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={handlePrevDay}
+                    className="p-2 rounded-xl border border-stone-200/50 dark:border-stone-850/50 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300"
+                    aria-label="Previous Day"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <div className="relative flex items-center bg-stone-100 dark:bg-darkSecondary border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-2 py-2 text-3xs font-bold text-stone-750 dark:text-stone-300 gap-1 cursor-pointer">
+                    <CalendarIcon size={11} className="text-stone-400" />
+                    <span>{formatDateToDMY(selectedDate)}</span>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={e => setSelectedDate(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </div>
+                  <button
+                    onClick={handleNextDay}
+                    className="p-2 rounded-xl border border-stone-200/50 dark:border-stone-850/50 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300"
+                    aria-label="Next Day"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <div className="relative flex items-center bg-stone-100 dark:bg-darkSecondary border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-2 py-2 text-stone-800 dark:text-stone-200 gap-1 cursor-pointer text-3xs font-semibold">
+                    <span>{formatDateToDMY(reportStartDate)}</span>
+                    <input
+                      type="date"
+                      value={reportStartDate}
+                      onChange={e => {
+                        setReportStartDate(e.target.value);
+                        setFilterType('custom');
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </div>
+                  <span className="text-4xs text-stone-400">to</span>
+                  <div className="relative flex items-center bg-stone-100 dark:bg-darkSecondary border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-2 py-2 text-stone-800 dark:text-stone-200 gap-1 cursor-pointer text-3xs font-semibold">
+                    <span>{formatDateToDMY(reportEndDate)}</span>
+                    <input
+                      type="date"
+                      value={reportEndDate}
+                      onChange={e => {
+                        setReportEndDate(e.target.value);
+                        setFilterType('custom');
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        ) : (
-          // Range controls for Reports View
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5 text-3xs font-semibold text-stone-500 dark:text-stone-450">
-              <div className="relative flex items-center bg-stone-50 dark:bg-darkSecondary border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-3 py-1.5 text-stone-800 dark:text-stone-200 gap-1.5 cursor-pointer">
-                <span>{formatDateToDMY(reportStartDate)}</span>
-                <input
-                  type="date"
-                  value={reportStartDate}
-                  onChange={e => {
-                    setReportStartDate(e.target.value);
-                    setFilterType('custom');
-                  }}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                />
-              </div>
-              <span>to</span>
-              <div className="relative flex items-center bg-stone-50 dark:bg-darkSecondary border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-3 py-1.5 text-stone-800 dark:text-stone-200 gap-1.5 cursor-pointer">
-                <span>{formatDateToDMY(reportEndDate)}</span>
-                <input
-                  type="date"
-                  value={reportEndDate}
-                  onChange={e => {
-                    setReportEndDate(e.target.value);
-                    setFilterType('custom');
-                  }}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                />
-              </div>
-            </div>
 
-            {/* Range Exports */}
-            <div className="flex items-center gap-1.5">
+          {/* Export buttons on mobile when not in 'today' mode */}
+          {filterType !== 'today' && (
+            <div className="flex items-center justify-end gap-1.5 border-t border-stone-200/40 dark:border-stone-850/30 pt-2">
+              <span className="text-4xs text-stone-450 mr-auto font-medium">Export:</span>
               <button
                 onClick={handleExportCSV}
                 disabled={reportData.length === 0}
-                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-3xs font-semibold border border-stone-200/60 dark:border-stone-800/60 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 disabled:opacity-50"
+                className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-3xs font-semibold border border-stone-200/60 dark:border-stone-800/60 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 disabled:opacity-50"
               >
                 <FileDown size={11} />
                 CSV
@@ -381,14 +387,120 @@ export function AttendanceView({
               <button
                 onClick={handleExportJSON}
                 disabled={reportData.length === 0}
-                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-3xs font-semibold border border-stone-200/60 dark:border-stone-800/60 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 disabled:opacity-50"
+                className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-3xs font-semibold border border-stone-200/60 dark:border-stone-800/60 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 disabled:opacity-50"
               >
                 <FileDown size={11} />
                 JSON
               </button>
             </div>
+          )}
+        </div>
+
+        {/* Desktop Layout: Tab Switcher and controls side-by-side */}
+        <div className="hidden md:flex flex-row md:items-center justify-between w-full gap-4">
+          {/* Switch Options */}
+          <div className="flex p-0.5 bg-stone-100 dark:bg-darkSecondary rounded-xl border border-stone-250/20 dark:border-stone-850/40 w-fit">
+            {[
+              { id: 'today', label: 'Today (Marking)' },
+              { id: 'weekly', label: 'Weekly' },
+              { id: 'monthly', label: 'Monthly' },
+              { id: 'yearly', label: 'Yearly' },
+              { id: 'custom', label: 'Custom Range' },
+            ].map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => setFilterType(opt.id as any)}
+                className={`px-3 py-1.5 rounded-lg text-3xs font-semibold transition-all ${
+                  filterType === opt.id
+                    ? 'bg-white text-black font-bold shadow-sm'
+                    : 'text-stone-500 hover:text-stone-750 dark:text-stone-450 dark:hover:text-stone-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
-        )}
+
+          {/* Dynamic Context Header Controls */}
+          {filterType === 'today' ? (
+            // Daily Nav for Today View
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevDay}
+                className="p-1.5 rounded-xl border border-stone-200/50 dark:border-stone-850/50 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <div className="relative flex items-center bg-stone-55 border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-2.5 py-1 text-3xs font-semibold text-stone-700 dark:text-stone-300 gap-1.5 cursor-pointer">
+                <CalendarIcon size={12} className="text-stone-400" />
+                <span>{formatDateToDMY(selectedDate)}</span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={e => setSelectedDate(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                />
+              </div>
+              <button
+                onClick={handleNextDay}
+                className="p-1.5 rounded-xl border border-stone-200/50 dark:border-stone-850/50 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300"
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          ) : (
+            // Range controls for Reports View
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 text-3xs font-semibold text-stone-500 dark:text-stone-450">
+                <div className="relative flex items-center bg-stone-50 dark:bg-darkSecondary border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-3 py-1.5 text-stone-800 dark:text-stone-200 gap-1.5 cursor-pointer">
+                  <span>{formatDateToDMY(reportStartDate)}</span>
+                  <input
+                    type="date"
+                    value={reportStartDate}
+                    onChange={e => {
+                      setReportStartDate(e.target.value);
+                      setFilterType('custom');
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                </div>
+                <span>to</span>
+                <div className="relative flex items-center bg-stone-50 dark:bg-darkSecondary border border-stone-200/50 dark:border-stone-850/50 rounded-xl px-3 py-1.5 text-stone-800 dark:text-stone-200 gap-1.5 cursor-pointer">
+                  <span>{formatDateToDMY(reportEndDate)}</span>
+                  <input
+                    type="date"
+                    value={reportEndDate}
+                    onChange={e => {
+                      setReportEndDate(e.target.value);
+                      setFilterType('custom');
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                </div>
+              </div>
+
+              {/* Range Exports */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleExportCSV}
+                  disabled={reportData.length === 0}
+                  className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-3xs font-semibold border border-stone-200/60 dark:border-stone-800/60 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 disabled:opacity-50"
+                >
+                  <FileDown size={11} />
+                  CSV
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  disabled={reportData.length === 0}
+                  className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-3xs font-semibold border border-stone-200/60 dark:border-stone-800/60 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 disabled:opacity-50"
+                >
+                  <FileDown size={11} />
+                  JSON
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 2. Primary Sub-View Render */}
