@@ -95,6 +95,13 @@ export function AuthView() {
   const handleCredentialResponse = async (response: any) => {
     setIsLoading(true);
     setErrorMsg('');
+    
+    // Safety timer to prevent getting stuck in a spinner if network request hangs
+    const safetyTimer = setTimeout(() => {
+      setIsLoading(false);
+      setErrorMsg('Sign-in timed out. Please check your internet connection or console logs.');
+    }, 12000);
+
     try {
       if (!response.credential) {
         throw new Error('No credential received.');
@@ -105,8 +112,10 @@ export function AuthView() {
         token: response.credential
       });
 
+      clearTimeout(safetyTimer);
       if (error) throw error;
     } catch (err: any) {
+      clearTimeout(safetyTimer);
       console.error('Sign-in error:', err);
       setErrorMsg(err.message || 'Google Sign-in failed. Please try again.');
       setIsLoading(false);
@@ -185,28 +194,28 @@ export function AuthView() {
 
           {/* 1. Google Authentication flow */}
           <div className="flex flex-col items-center justify-center min-h-[50px] w-full">
-            {isLoading ? (
-              <div className="flex flex-col items-center gap-2">
+            {isLoading && (
+              <div className="flex flex-col items-center gap-2 py-2">
                 <div className="w-6 h-6 border-2 border-[#B08A4A] border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : (
-              <div className="flex flex-col items-center w-full">
-                {sdkLoaded ? (
-                  <div 
-                    id="google-signin-btn" 
-                    className="flex justify-center transition-all duration-300 w-full hover:scale-[1.01]"
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => window.location.reload()}
-                    className="w-full py-2.5 bg-[#3A281C] dark:bg-[#B08A4A] text-white text-xs font-bold rounded-xl transition-all uppercase tracking-wider text-center"
-                  >
-                    Load Social Login
-                  </button>
-                )}
-              </div>
             )}
+            
+            <div className={`flex flex-col items-center w-full ${isLoading ? 'hidden' : ''}`}>
+              {sdkLoaded ? (
+                <div 
+                  id="google-signin-btn" 
+                  className="flex justify-center transition-all duration-300 w-full hover:scale-[1.01]"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="w-full py-2.5 bg-[#3A281C] dark:bg-[#B08A4A] text-white text-xs font-bold rounded-xl transition-all uppercase tracking-wider text-center"
+                >
+                  Load Social Login
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Or Divider */}
