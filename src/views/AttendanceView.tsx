@@ -298,7 +298,7 @@ export function AttendanceView({
                 onChange={e => setFilterType(e.target.value as any)}
                 className="w-full px-2.5 py-2 bg-stone-100 dark:bg-darkSecondary rounded-xl border border-stone-250/40 dark:border-stone-850/40 text-3xs font-bold text-stone-850 dark:text-stone-200 outline-none cursor-pointer appearance-none"
               >
-                <option value="today">Today (Marking)</option>
+                <option value="today">Today</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
@@ -401,7 +401,7 @@ export function AttendanceView({
           {/* Switch Options */}
           <div className="flex p-0.5 bg-stone-100 dark:bg-darkSecondary rounded-xl border border-stone-250/20 dark:border-stone-850/40 w-fit">
             {[
-              { id: 'today', label: 'Today (Marking)' },
+              { id: 'today', label: 'Today' },
               { id: 'weekly', label: 'Weekly' },
               { id: 'monthly', label: 'Monthly' },
               { id: 'yearly', label: 'Yearly' },
