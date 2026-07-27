@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { db } from '../db/db';
+import { syncService } from '../services/syncService';
 
 export interface AuthUser {
   id: string; // Supabase UID
@@ -110,6 +111,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Try to perform a final sync push before signing out to prevent data loss
+    try {
+      if (navigator.onLine) {
+        await syncService.triggerSync();
+      }
+    } catch (syncErr) {
+      console.warn('Final sync before sign-out failed:', syncErr);
+    }
+
     // 1. Trigger Supabase Sign Out
     await supabase.auth.signOut();
     

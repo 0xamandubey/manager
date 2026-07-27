@@ -51,9 +51,24 @@ function snakeToCamel(obj: any): any {
   return camelObj;
 }
 
+// Parses string or numeric timestamps into numeric milliseconds
+function parseTimestamp(val: any): number {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    if (/^\d+$/.test(val)) {
+      return Number(val);
+    }
+    const parsed = new Date(val).getTime();
+    return isNaN(parsed) ? Date.now() : parsed;
+  }
+  return Date.now();
+}
+
 class SyncService {
   private syncTimeout: any = null;
+  private debounceTimeout: any = null;
   private isProcessing = false;
+  private activePromise: Promise<void> | null = null;
   private statusListeners = new Set<(status: SyncStatusType) => void>();
   private currentStatus: SyncStatusType = 'synced';
 
@@ -72,11 +87,23 @@ class SyncService {
     return this.currentStatus;
   }
 
+  public triggerSyncDebounced() {
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+    }
+    this.debounceTimeout = setTimeout(() => {
+      this.triggerSync();
+    }, 1000); // 1 second debounce
+  }
+
   // Start background sync polling and event listeners
   public start() {
     window.addEventListener('online', () => this.triggerSync());
     window.addEventListener('offline', () => this.setStatus('offline'));
     
+    // Register listener on local DB modifications
+    db.onChangesSaved = () => this.triggerSyncDebounced();
+
     // Initial sync trigger
     this.triggerSync();
 
@@ -91,48 +118,59 @@ class SyncService {
       clearInterval(this.syncTimeout);
       this.syncTimeout = null;
     }
+    db.onChangesSaved = undefined;
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+      this.debounceTimeout = null;
+    }
   }
 
   // Primary trigger to run a sync cycle (push + pull)
-  public async triggerSync() {
-    if (this.isProcessing) return;
-    if (!navigator.onLine) {
-      this.setStatus('offline');
-      return;
+  public async triggerSync(): Promise<void> {
+    if (this.isProcessing && this.activePromise) {
+      return this.activePromise;
     }
-
+ 
     this.isProcessing = true;
     this.setStatus('syncing');
 
-    try {
-      // 1. Fetch current user session to ensure we have a valid context
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+    this.activePromise = (async () => {
+      try {
+        if (!navigator.onLine) {
+          this.setStatus('offline');
+          return;
+        }
+
+        // 1. Fetch current user session to ensure we have a valid context
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          this.setStatus('synced');
+          return;
+        }
+
+        const userProfile = await db.users.toCollection().first();
+        if (!userProfile || !userProfile.businessId) {
+          this.setStatus('synced');
+          return;
+        }
+
+        // 2. Run Push Sync Cycle
+        await this.pushLocalChanges(session.user.id, userProfile.businessId);
+
+        // 3. Run Pull Sync Cycle
+        await this.pullRemoteChanges(userProfile.businessId);
+
         this.setStatus('synced');
+      } catch (err) {
+        console.error('Synchronization cycle error:', err);
+        this.setStatus('error');
+      } finally {
         this.isProcessing = false;
-        return;
+        this.activePromise = null;
       }
+    })();
 
-      const userProfile = await db.users.toCollection().first();
-      if (!userProfile || !userProfile.businessId) {
-        this.setStatus('synced');
-        this.isProcessing = false;
-        return;
-      }
-
-      // 2. Run Push Sync Cycle
-      await this.pushLocalChanges(session.user.id, userProfile.businessId);
-
-      // 3. Run Pull Sync Cycle
-      await this.pullRemoteChanges(userProfile.businessId);
-
-      this.setStatus('synced');
-    } catch (err) {
-      console.error('Synchronization cycle error:', err);
-      this.setStatus('error');
-    } finally {
-      this.isProcessing = false;
-    }
+    return this.activePromise;
   }
 
   // Push local outbox mutations to Supabase
@@ -141,6 +179,34 @@ class SyncService {
     if (outboxItems.length === 0) return;
 
     for (const item of outboxItems) {
+      if (item.tableName === 'settings') {
+        try {
+          const localSettings = await db.settings.get('general');
+          if (localSettings) {
+            const supabaseSettings = {
+              business_name: localSettings.businessName,
+              currency: localSettings.currency,
+              week_start: localSettings.weekStart,
+              theme: localSettings.theme
+            };
+            const { error } = await supabase
+              .from('businesses')
+              .update({
+                name: localSettings.businessName,
+                settings: supabaseSettings,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', businessId);
+            if (error) throw error;
+          }
+          await db.syncOutbox.delete(item.id!);
+        } catch (err) {
+          console.warn('Sync push failed for settings:', err);
+          throw err;
+        }
+        continue;
+      }
+
       const supabaseTable = TABLE_MAP[item.tableName];
       if (!supabaseTable) {
         // Unmapped table, delete outbox entry
@@ -183,6 +249,18 @@ class SyncService {
             supabasePayload.created_at = localRecord.createdAt || Date.now();
           } else {
             supabasePayload.updated_at = new Date().toISOString();
+          }
+
+          // Resolve missing branch_id for attendance records
+          if (item.tableName === 'attendance') {
+            const userProfile = await db.users.toCollection().first();
+            const staffRec = await db.staff.get(localRecord.staffId);
+            supabasePayload.branch_id = staffRec?.branchId || userProfile?.branchId || '';
+          }
+
+          // Convert created_at number to ISO String for non-notes/cftCalculations tables
+          if (typeof supabasePayload.created_at === 'number' && item.tableName !== 'notes' && item.tableName !== 'cftCalculations') {
+            supabasePayload.created_at = new Date(supabasePayload.created_at).toISOString();
           }
 
           const { error } = await supabase
@@ -243,8 +321,21 @@ class SyncService {
               const cleanRecord = { ...localRecord };
               delete cleanRecord.ownerId;
               delete cleanRecord.businessId;
-              delete cleanRecord.updatedAt;
+              if (localTable !== 'notes') {
+                delete cleanRecord.updatedAt;
+              }
               delete cleanRecord.deletedAt;
+
+              // Safely convert timestamp fields back to numeric milliseconds
+              if (cleanRecord.createdAt !== undefined && cleanRecord.createdAt !== null) {
+                cleanRecord.createdAt = parseTimestamp(cleanRecord.createdAt);
+              }
+              if (cleanRecord.updatedAt !== undefined && cleanRecord.updatedAt !== null) {
+                cleanRecord.updatedAt = parseTimestamp(cleanRecord.updatedAt);
+              }
+              if (cleanRecord.paidAt !== undefined && cleanRecord.paidAt !== null) {
+                cleanRecord.paidAt = parseTimestamp(cleanRecord.paidAt);
+              }
 
               await db.table(localTable).put(cleanRecord);
             }
@@ -262,16 +353,20 @@ class SyncService {
     try {
       const { data, error } = await supabase
         .from('businesses')
-        .select('settings')
+        .select('name, settings')
         .eq('id', businessId)
         .single();
 
       if (error) throw error;
-      if (data?.settings) {
+      if (data) {
         db.syncing = true;
+        const settingsObj = data.settings || {};
         await db.settings.put({
           key: 'general',
-          ...snakeToCamel(data.settings)
+          businessName: data.name || settingsObj.business_name || 'My Business',
+          currency: settingsObj.currency || '$',
+          weekStart: settingsObj.week_start !== undefined ? settingsObj.week_start : 1,
+          theme: settingsObj.theme || 'system'
         });
       }
     } catch (err) {

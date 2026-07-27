@@ -14,6 +14,7 @@ interface RouteGuardProps {
 export function RouteGuard({ children }: RouteGuardProps) {
   const { isLoaded, isSignedIn, user } = useAuth();
   const [isSeeding, setIsSeeding] = useState(false);
+  const [hasCheckedSupabase, setHasCheckedSupabase] = useState(false);
 
   // Query local IndexedDB user profile by Supabase User ID (googleId index)
   const localProfile = useLiveQuery(
@@ -38,130 +39,144 @@ export function RouteGuard({ children }: RouteGuardProps) {
   // Seed local user profile record if missing, fetching existing business details if they exist in Supabase
   useEffect(() => {
     async function seedLocalProfile() {
-      if (isSignedIn && user && localProfile === null) {
-        setIsSeeding(true);
-        try {
-          // Check if user already has a business registered in Supabase
-          const { data: businesses, error: busError } = await supabase
-            .from('businesses')
-            .select('id, name, settings')
-            .eq('owner_id', user.id);
+      if (isSignedIn && user && !hasCheckedSupabase) {
+        // Wait for IndexedDB profile to load first
+        if (localProfile === undefined) return;
 
-          if (busError) throw busError;
+        // Check if profile is missing OR exists but doesn't have a businessId
+        if (localProfile === null || !localProfile.businessId) {
+          setIsSeeding(true);
+          try {
+            // Check if user already has a business registered in Supabase
+            const { data: businesses, error: busError } = await supabase
+              .from('businesses')
+              .select('id, name, settings')
+              .eq('owner_id', user.id);
 
-          if (businesses && businesses.length > 0) {
-            // Existing business found, restore it
-            const existingBusiness = businesses[0];
-            const businessId = existingBusiness.id;
+            if (busError) throw busError;
 
-            // Fetch branches for this business
-            const { data: branches, error: branchError } = await supabase
-              .from('branches')
-              .select('id, name')
-              .eq('business_id', businessId);
+            if (businesses && businesses.length > 0) {
+              // Existing business found, restore it
+              const existingBusiness = businesses[0];
+              const businessId = existingBusiness.id;
 
-            if (branchError) throw branchError;
+              // Fetch branches for this business
+              const { data: branches, error: branchError } = await supabase
+                .from('branches')
+                .select('id, name')
+                .eq('business_id', businessId);
 
-            let branchId = '';
-            if (branches && branches.length > 0) {
-              branchId = branches[0].id;
-            } else {
-              // Create a default branch in Supabase if missing
-              branchId = crypto.randomUUID();
-              await supabase.from('branches').insert({
-                id: branchId,
-                business_id: businessId,
-                owner_id: user.id,
-                name: 'Main Branch'
-              });
-            }
+              if (branchError) throw branchError;
 
-            // Put user profile details with businessId and branchId in local Dexie
-            await db.users.put({
-              googleId: user.id,
-              fullName: user.name,
-              email: user.email,
-              profilePhoto: user.picture,
-              authProvider: user.authProvider,
-              createdDate: Date.now(),
-              lastLogin: Date.now(),
-              businessId,
-              branchId
-            });
-
-            // Set active branch in localStorage
-            localStorage.setItem('activeBranchId', branchId);
-
-            // Populate local settings and branches tables
-            db.syncing = true;
-            try {
+              let branchId = '';
               if (branches && branches.length > 0) {
-                for (const b of branches) {
-                  await db.branches.put({
-                    id: b.id,
-                    name: b.name
-                  });
-                }
+                branchId = branches[0].id;
               } else {
-                await db.branches.put({
+                // Create a default branch in Supabase if missing
+                branchId = crypto.randomUUID();
+                await supabase.from('branches').insert({
                   id: branchId,
+                  business_id: businessId,
+                  owner_id: user.id,
                   name: 'Main Branch'
                 });
               }
 
-              const settingsObj = existingBusiness.settings || {};
-              await db.settings.put({
-                key: 'general',
-                businessName: existingBusiness.name || 'My Business',
-                currency: settingsObj.currency || '$',
-                weekStart: settingsObj.week_start !== undefined ? settingsObj.week_start : 1,
-                theme: settingsObj.theme || 'system'
+              // Put user profile details with businessId and branchId in local Dexie
+              await db.users.put({
+                googleId: user.id,
+                fullName: user.name,
+                email: user.email,
+                profilePhoto: user.picture,
+                authProvider: user.authProvider,
+                createdDate: localProfile?.createdDate || Date.now(),
+                lastLogin: Date.now(),
+                businessId,
+                branchId
               });
-            } finally {
-              db.syncing = false;
-            }
 
-            // Trigger data pull immediately
-            syncService.triggerSync();
-          } else {
-            // New user, seed empty IDs to trigger onboarding view
-            await db.users.put({
-              googleId: user.id,
-              fullName: user.name,
-              email: user.email,
-              profilePhoto: user.picture,
-              authProvider: user.authProvider,
-              createdDate: Date.now(),
-              lastLogin: Date.now(),
-              businessId: '',
-              branchId: ''
-            });
+              // Set active branch in localStorage
+              localStorage.setItem('activeBranchId', branchId);
+
+              // Populate local settings and branches tables
+              db.syncing = true;
+              try {
+                if (branches && branches.length > 0) {
+                  for (const b of branches) {
+                    await db.branches.put({
+                      id: b.id,
+                      name: b.name
+                    });
+                  }
+                } else {
+                  await db.branches.put({
+                    id: branchId,
+                    name: 'Main Branch'
+                  });
+                }
+
+                const settingsObj = existingBusiness.settings || {};
+                await db.settings.put({
+                  key: 'general',
+                  businessName: existingBusiness.name || 'My Business',
+                  currency: settingsObj.currency || '$',
+                  weekStart: settingsObj.week_start !== undefined ? settingsObj.week_start : 1,
+                  theme: settingsObj.theme || 'system'
+                });
+              } finally {
+                db.syncing = false;
+              }
+
+              // Trigger data pull immediately
+              syncService.triggerSync();
+            } else {
+              // New user, seed empty IDs to trigger onboarding view if not already seeded
+              if (localProfile === null) {
+                await db.users.put({
+                  googleId: user.id,
+                  fullName: user.name,
+                  email: user.email,
+                  profilePhoto: user.picture,
+                  authProvider: user.authProvider,
+                  createdDate: Date.now(),
+                  lastLogin: Date.now(),
+                  businessId: '',
+                  branchId: ''
+                });
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to seed local user profile or fetch existing business:', err);
+            // Fallback seed so user doesn't get stuck loading
+            if (localProfile === null) {
+              try {
+                await db.users.put({
+                  googleId: user.id,
+                  fullName: user.name,
+                  email: user.email,
+                  profilePhoto: user.picture,
+                  authProvider: user.authProvider,
+                  createdDate: Date.now(),
+                  lastLogin: Date.now(),
+                  businessId: '',
+                  branchId: ''
+                });
+              } catch (innerErr) {
+                console.error('Critical fallback user profile seeding failed:', innerErr);
+              }
+            }
+          } finally {
+            setIsSeeding(false);
+            setHasCheckedSupabase(true);
           }
-        } catch (err) {
-          console.warn('Failed to seed local user profile or fetch existing business:', err);
-          // Fallback seed so user doesn't get stuck loading
-          try {
-            await db.users.put({
-              googleId: user.id,
-              fullName: user.name,
-              email: user.email,
-              profilePhoto: user.picture,
-              authProvider: user.authProvider,
-              createdDate: Date.now(),
-              lastLogin: Date.now(),
-              businessId: '',
-              branchId: ''
-            });
-          } catch (innerErr) {
-            console.error('Critical fallback user profile seeding failed:', innerErr);
-          }
-        } finally {
-          setIsSeeding(false);
+        } else {
+          // Profile exists and has a businessId, mark as checked
+          setHasCheckedSupabase(true);
         }
       }
     }
     seedLocalProfile();
-  }, [isSignedIn, user, localProfile]);
+  }, [isSignedIn, user, localProfile, hasCheckedSupabase]);
 
   // Update last login timestamp in local DB if needed
   useEffect(() => {

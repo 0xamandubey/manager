@@ -209,6 +209,9 @@ class StaffAttendanceDatabase extends Dexie {
   // Global flag to bypass hooks during remote sync operations
   public syncing: boolean = false;
 
+  // Callback to trigger instant sync when changes are saved to outbox
+  public onChangesSaved?: () => void;
+
   constructor() {
     super('StaffAttendanceDatabase');
     
@@ -467,6 +470,9 @@ class StaffAttendanceDatabase extends Dexie {
           payload: recordObj ? JSON.stringify(recordObj) : undefined,
           timestamp: Date.now(),
         });
+        if (self.onChangesSaved) {
+          self.onChangesSaved();
+        }
       } catch (err) {
         console.error(`Failed to add outbox entry for ${tableName} ${action}:`, err);
       }
