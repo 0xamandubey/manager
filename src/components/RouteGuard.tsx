@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthProvider';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { AuthView } from '../views/AuthView';
 import { OnboardingView } from '../views/OnboardingView';
 import { syncService } from '../services/syncService';
+import { supabase } from '../supabaseClient';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface RouteGuardProps {
 
 export function RouteGuard({ children }: RouteGuardProps) {
   const { isLoaded, isSignedIn, user } = useAuth();
+  const [isSeeding, setIsSeeding] = useState(false);
 
   // Query local IndexedDB user profile by Supabase User ID (googleId index)
   const localProfile = useLiveQuery(
@@ -33,24 +35,128 @@ export function RouteGuard({ children }: RouteGuardProps) {
     }
   }, [isSignedIn]);
 
-  // Seed local user profile record if missing
+  // Seed local user profile record if missing, fetching existing business details if they exist in Supabase
   useEffect(() => {
     async function seedLocalProfile() {
       if (isSignedIn && user && localProfile === null) {
+        setIsSeeding(true);
         try {
-          await db.users.put({
-            googleId: user.id,
-            fullName: user.name,
-            email: user.email,
-            profilePhoto: user.picture,
-            authProvider: user.authProvider,
-            createdDate: Date.now(),
-            lastLogin: Date.now(),
-            businessId: '',
-            branchId: ''
-          });
+          // Check if user already has a business registered in Supabase
+          const { data: businesses, error: busError } = await supabase
+            .from('businesses')
+            .select('id, name, settings')
+            .eq('owner_id', user.id);
+
+          if (busError) throw busError;
+
+          if (businesses && businesses.length > 0) {
+            // Existing business found, restore it
+            const existingBusiness = businesses[0];
+            const businessId = existingBusiness.id;
+
+            // Fetch branches for this business
+            const { data: branches, error: branchError } = await supabase
+              .from('branches')
+              .select('id, name')
+              .eq('business_id', businessId);
+
+            if (branchError) throw branchError;
+
+            let branchId = '';
+            if (branches && branches.length > 0) {
+              branchId = branches[0].id;
+            } else {
+              // Create a default branch in Supabase if missing
+              branchId = crypto.randomUUID();
+              await supabase.from('branches').insert({
+                id: branchId,
+                business_id: businessId,
+                owner_id: user.id,
+                name: 'Main Branch'
+              });
+            }
+
+            // Put user profile details with businessId and branchId in local Dexie
+            await db.users.put({
+              googleId: user.id,
+              fullName: user.name,
+              email: user.email,
+              profilePhoto: user.picture,
+              authProvider: user.authProvider,
+              createdDate: Date.now(),
+              lastLogin: Date.now(),
+              businessId,
+              branchId
+            });
+
+            // Set active branch in localStorage
+            localStorage.setItem('activeBranchId', branchId);
+
+            // Populate local settings and branches tables
+            db.syncing = true;
+            try {
+              if (branches && branches.length > 0) {
+                for (const b of branches) {
+                  await db.branches.put({
+                    id: b.id,
+                    name: b.name
+                  });
+                }
+              } else {
+                await db.branches.put({
+                  id: branchId,
+                  name: 'Main Branch'
+                });
+              }
+
+              const settingsObj = existingBusiness.settings || {};
+              await db.settings.put({
+                key: 'general',
+                businessName: existingBusiness.name || 'My Business',
+                currency: settingsObj.currency || '$',
+                weekStart: settingsObj.week_start !== undefined ? settingsObj.week_start : 1,
+                theme: settingsObj.theme || 'system'
+              });
+            } finally {
+              db.syncing = false;
+            }
+
+            // Trigger data pull immediately
+            syncService.triggerSync();
+          } else {
+            // New user, seed empty IDs to trigger onboarding view
+            await db.users.put({
+              googleId: user.id,
+              fullName: user.name,
+              email: user.email,
+              profilePhoto: user.picture,
+              authProvider: user.authProvider,
+              createdDate: Date.now(),
+              lastLogin: Date.now(),
+              businessId: '',
+              branchId: ''
+            });
+          }
         } catch (err) {
-          console.warn('Failed to seed local user profile:', err);
+          console.warn('Failed to seed local user profile or fetch existing business:', err);
+          // Fallback seed so user doesn't get stuck loading
+          try {
+            await db.users.put({
+              googleId: user.id,
+              fullName: user.name,
+              email: user.email,
+              profilePhoto: user.picture,
+              authProvider: user.authProvider,
+              createdDate: Date.now(),
+              lastLogin: Date.now(),
+              businessId: '',
+              branchId: ''
+            });
+          } catch (innerErr) {
+            console.error('Critical fallback user profile seeding failed:', innerErr);
+          }
+        } finally {
+          setIsSeeding(false);
         }
       }
     }
@@ -90,6 +196,9 @@ export function RouteGuard({ children }: RouteGuardProps) {
 
   // 4. Authenticated, but has not completed onboarding
   if (localProfile === null || !localProfile.businessId) {
+    if (isSeeding) {
+      return <SkeletonDashboard />;
+    }
     return <OnboardingView />;
   }
 
